@@ -1,0 +1,320 @@
+-- Cấu hình Key, Link Get Key & Link Script
+local CORRECT_KEY = "AjjansHubKeyVdksie - NbdkwowowhHshskejebdkke"
+local GET_KEY_URL = "https://link4m.org/M6zSY"
+local SCRIPT_URL = "https://api.luarmor.net/files/v4/loaders/271f96ca25f29ae395be1c0f9e6f4ead.lua"
+
+-- Tên file lưu key cục bộ (Dùng để nhớ key trong 24h)
+local KEY_FILE = "AjjansHub_SavedKey.json"
+
+-- Hàm kiểm tra xem đã lưu key và còn hạn 24h hay không
+local function hasValidSavedKey()
+    if readfile and isfile and isfile(KEY_FILE) then
+        local success, data = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(readfile(KEY_FILE))
+        end)
+        if success and data and data.key == CORRECT_KEY and data.time then
+            -- 86400 giây = 24 giờ
+            if os.time() - data.time < 86400 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- Hàm lưu key khi nhập đúng
+local function saveKey()
+    if writefile then
+        local data = {
+            key = CORRECT_KEY,
+            time = os.time()
+        }
+        pcall(function()
+            writefile(KEY_FILE, game:GetService("HttpService"):JSONEncode(data))
+        end)
+    end
+end
+
+-- Dịch vụ
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Nếu đã lưu key hợp lệ trong vòng 24h thì bỏ qua bảng Key và chạy thẳng script luôn
+if hasValidSavedKey() then
+    local success, err = pcall(function()
+        loadstring(game:HttpGet(SCRIPT_URL))()
+    end)
+    if not success then
+        warn("Error loading script: " .. tostring(err))
+    end
+    return
+end
+
+-- Xóa UI cũ nếu có
+if CoreGui:FindFirstChild("AjjansHubEnglishModern") then
+    CoreGui.AjjansHubEnglishModern:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AjjansHubEnglishModern"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- Khung chính (Main Frame) - Bo góc tròn trọn vẹn, không bị lẹm viền
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -140)
+MainFrame.Size = UDim2.new(0, 420, 0, 285)
+MainFrame.ClipsDescendants = false
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 20)
+MainCorner.Parent = MainFrame
+
+-- Viền đỏ tươi sắc nét ôm trọn khung
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Parent = MainFrame
+MainStroke.Color = Color3.fromRGB(235, 30, 50)
+MainStroke.Thickness = 1.5
+
+-- Kéo thả cửa sổ mượt mà
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Tiêu đề chính AJJANS HUB căn giữa
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 0, 0, 16)
+Title.Size = UDim2.new(1, 0, 0, 26)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "AJJANS HUB"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Chữ phụ nhỏ phía dưới tiêu đề: "Please enter your key below"
+local Subtitle = Instance.new("TextLabel")
+Subtitle.Parent = MainFrame
+Subtitle.BackgroundTransparency = 1
+Subtitle.Position = UDim2.new(0, 0, 0, 42)
+Subtitle.Size = UDim2.new(1, 0, 0, 18)
+Subtitle.Font = Enum.Font.GothamMedium
+Subtitle.Text = "Please enter your key below"
+Subtitle.TextColor3 = Color3.fromRGB(130, 130, 130)
+Subtitle.TextSize = 11
+Subtitle.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Ô nhập Key (TextBox) bo góc tròn
+local TextBoxBg = Instance.new("Frame")
+TextBoxBg.Parent = MainFrame
+TextBoxBg.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+TextBoxBg.Position = UDim2.new(0.075, 0, 0, 72)
+TextBoxBg.Size = UDim2.new(0.85, 0, 0, 48)
+
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 12)
+BoxCorner.Parent = TextBoxBg
+
+local BoxStroke = Instance.new("UIStroke")
+BoxStroke.Parent = TextBoxBg
+BoxStroke.Color = Color3.fromRGB(45, 45, 45)
+BoxStroke.Thickness = 1
+
+local TextBox = Instance.new("TextBox")
+TextBox.Parent = TextBoxBg
+TextBox.BackgroundTransparency = 1
+TextBox.Position = UDim2.new(0, 16, 0, 0)
+TextBox.Size = UDim2.new(1, -55, 1, 0)
+TextBox.ClearTextOnFocus = false
+TextBox.Font = Enum.Font.GothamMedium
+TextBox.PlaceholderText = "Enter your key here..."
+TextBox.Text = ""
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
+TextBox.TextSize = 13
+TextBox.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Nút Paste nhanh bên trong ô nhập
+local PasteBtn = Instance.new("TextButton")
+PasteBtn.Parent = TextBoxBg
+PasteBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+PasteBtn.Position = UDim2.new(1, -40, 0.5, -16)
+PasteBtn.Size = UDim2.new(0, 32, 0, 32)
+PasteBtn.Font = Enum.Font.GothamBold
+PasteBtn.Text = "📋"
+PasteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PasteBtn.TextSize = 12
+PasteBtn.AutoButtonColor = false
+
+local PasteCorner = Instance.new("UICorner")
+PasteCorner.CornerRadius = UDim.new(0, 8)
+PasteCorner.Parent = PasteBtn
+
+PasteBtn.MouseButton1Click:Connect(function()
+    if getclipboard then
+        TextBox.Text = getclipboard()
+    elseif syn and syn.get_clipboard then
+        TextBox.Text = syn.get_clipboard()
+    end
+end)
+
+TextBox.Focused:Connect(function()
+    TweenService:Create(BoxStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(235, 30, 50)}):Play()
+end)
+TextBox.FocusLost:Connect(function()
+    TweenService:Create(BoxStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(45, 45, 45)}):Play()
+end)
+
+-- Hai nút Check Key và Get Key nằm cạnh nhau ở dưới
+local ButtonContainer = Instance.new("Frame")
+ButtonContainer.Parent = MainFrame
+ButtonContainer.BackgroundTransparency = 1
+ButtonContainer.Position = UDim2.new(0.075, 0, 0, 138)
+ButtonContainer.Size = UDim2.new(0.85, 0, 0, 44)
+
+-- Nút Check Key (Bên trái)
+local CheckKeyBtn = Instance.new("TextButton")
+CheckKeyBtn.Parent = ButtonContainer
+CheckKeyBtn.BackgroundColor3 = Color3.fromRGB(235, 30, 50)
+CheckKeyBtn.Position = UDim2.new(0, 0, 0, 0)
+CheckKeyBtn.Size = UDim2.new(0.48, 0, 1, 0)
+CheckKeyBtn.AutoButtonColor = false
+CheckKeyBtn.Font = Enum.Font.GothamBold
+CheckKeyBtn.Text = "Check Key"
+CheckKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CheckKeyBtn.TextSize = 13
+
+local CheckKeyCorner = Instance.new("UICorner")
+CheckKeyCorner.CornerRadius = UDim.new(0, 12)
+CheckKeyCorner.Parent = CheckKeyBtn
+
+CheckKeyBtn.MouseEnter:Connect(function()
+    TweenService:Create(CheckKeyBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(255, 50, 70)}):Play()
+end)
+CheckKeyBtn.MouseLeave:Connect(function()
+    TweenService:Create(CheckKeyBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(235, 30, 50)}):Play()
+end)
+
+-- Nút Get Key (Bên phải)
+local GetKeyBtn = Instance.new("TextButton")
+GetKeyBtn.Parent = ButtonContainer
+GetKeyBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+GetKeyBtn.Position = UDim2.new(0.52, 0, 0, 0)
+GetKeyBtn.Size = UDim2.new(0.48, 0, 1, 0)
+GetKeyBtn.AutoButtonColor = false
+GetKeyBtn.Font = Enum.Font.GothamMedium
+GetKeyBtn.Text = "Get Key"
+GetKeyBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+GetKeyBtn.TextSize = 13
+
+local GetKeyCorner = Instance.new("UICorner")
+GetKeyCorner.CornerRadius = UDim.new(0, 12)
+GetKeyCorner.Parent = GetKeyBtn
+
+local GetKeyStroke = Instance.new("UIStroke")
+GetKeyStroke.Parent = GetKeyBtn
+GetKeyStroke.Color = Color3.fromRGB(45, 45, 45)
+GetKeyStroke.Thickness = 1
+
+GetKeyBtn.MouseEnter:Connect(function()
+    TweenService:Create(GetKeyBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(30, 30, 30), TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+    TweenService:Create(GetKeyStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(235, 30, 50)}):Play()
+end)
+GetKeyBtn.MouseLeave:Connect(function()
+    TweenService:Create(GetKeyBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(22, 22, 22), TextColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+    TweenService:Create(GetKeyStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(45, 45, 45)}):Play()
+end)
+
+GetKeyBtn.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(GET_KEY_URL)
+        GetKeyBtn.Text = "Copied!"
+        task.wait(2)
+        GetKeyBtn.Text = "Get Key"
+    else
+        GetKeyBtn.Text = "Copy Failed!"
+        task.wait(2)
+        GetKeyBtn.Text = "Get Key"
+    end
+end)
+
+-- Trạng thái hiển thị ở dưới cùng
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Parent = MainFrame
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Position = UDim2.new(0.075, 0, 0, 208)
+StatusLabel.Size = UDim2.new(0.85, 0, 0, 35)
+StatusLabel.Font = Enum.Font.GothamMedium
+StatusLabel.Text = "Waiting for key..."
+StatusLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+StatusLabel.TextSize = 12
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Logic kiểm tra Key kèm hiệu ứng lắc mượt mà và tự xóa chữ khi sai
+CheckKeyBtn.MouseButton1Click:Connect(function()
+    local enteredKey = TextBox.Text
+    
+    if enteredKey == CORRECT_KEY then
+        StatusLabel.TextColor3 = Color3.fromRGB(50, 200, 100)
+        StatusLabel.Text = "Key correct, loading..."
+        
+        -- Lưu key lại để dùng trong 24 giờ tới
+        saveKey()
+        
+        task.wait(0.8)
+        
+        ScreenGui:Destroy()
+        
+        local success, err = pcall(function()
+            loadstring(game:HttpGet(SCRIPT_URL))()
+        end)
+        
+        if not success then
+            warn("Error loading script: " .. tostring(err))
+        end
+    else
+        StatusLabel.TextColor3 = Color3.fromRGB(235, 50, 50)
+        StatusLabel.Text = "Invalid key! Please try again."
+        
+        -- Xóa sạch chữ trong ô nhập key khi sai
+        TextBox.Text = ""
+        
+        -- Hiệu ứng lắc nhẹ mượt mà (Smooth Shake Animation)
+        local originalPos = MainFrame.Position
+        local tweenInfo = TweenInfo.new(0.04, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+        
+        for i = 1, 2 do
+            TweenService:Create(MainFrame, tweenInfo, {Position = originalPos + UDim2.new(0, 8, 0, 0)}):Play()
+            task.wait(0.04)
+            TweenService:Create(MainFrame, tweenInfo, {Position = originalPos - UDim2.new(0, 8, 0, 0)}):Play()
+            task.wait(0.04)
+        end
+        TweenService:Create(MainFrame, tweenInfo, {Position = originalPos}):Play()
+    end
+end)
